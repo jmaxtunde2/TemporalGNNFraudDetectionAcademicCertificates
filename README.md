@@ -1,7 +1,7 @@
 📜 Temporal Graph Neural Network for Academic Credential Fraud Detection
 
 This repository implements a Hybrid Temporal Graph Neural Network (T-GNN) framework for detecting fraud in blockchain-based academic credential ecosystems.
-The system combines real-world credential data (e.g., Corilla exports) with synthetic augmentation to model evolving fraud patterns involving students, institutions, certificates, and verifiers.
+The system combines real-world credential data extracted from Corillaplatform available at https://corilla.coriyase.com/, with synthetic augmentation to model evolving fraud patterns involving students, institutions, certificates, and verifiers.
 
 🔍 Motivation
 

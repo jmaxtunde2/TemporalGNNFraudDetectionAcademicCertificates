@@ -39,19 +39,14 @@ Research-ready experimental design aligned with journal standards
 
 The system models academic credentials as a temporal heterogeneous graph:
 
-Nodes
+Nodes: Students, Institutions, Certificates
 
-Students
-
-Institutions
-
-Certificates
-
-Edges
-
-Institution → Certificate (issuance)
-
-Certificate → Student (ownership)
+Edges: Verifier, ISSUED_BY (C → I): Issuance of credential by an institution;
+• OWNS (S → C): ownership of a credential by a student;
+• VERIFIED (V → C): verification of a credential;
+• REVOKED (I → C): revocation of a credential;
+• AFFILIATED_WITH (S → I): student–institution affiliation;
+• TRANSFER (I ↔ I Though S): transfer of credit or transfer of credential between institutions.
 
 Time
 

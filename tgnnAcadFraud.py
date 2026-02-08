@@ -47,7 +47,7 @@ print("✔ Real Corilla data loaded")
 # 2. SYNTHETIC DATA AUGMENTATION
 # ==========================================================
 
-SYN_RATIO = 0.4
+SYN_RATIO = 0.7
 num_syn = int(len(certificates_real) * SYN_RATIO)
 
 students_syn = pd.DataFrame({

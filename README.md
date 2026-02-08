@@ -86,6 +86,46 @@ Extensible
 
 Suitable for academic benchmarking
 
+⚙️ Installation
+
+This project is optimized for Google Colab, but also runs locally.
+
+Note: GPU acceleration is automatically used if available.
+
+▶️ Running the Model
+python tgnnAcadFraud.py
+
+
+The pipeline will:
+
+Load real Corilla data
+
+Generate synthetic augmentation
+
+Build temporal graphs
+
+Train a lightweight GNN
+
+Evaluate fraud detection performance
+
+Output sample fraud alerts
+
+📈 Evaluation Metrics
+
+The model is evaluated using:
+
+Accuracy
+
+Precision
+
+Recall
+
+F1-score
+
+ROC-AUC
+
+These metrics follow standard fraud detection and graph ML benchmarks.
+
 🚀 Future Work
 
 Planned extensions include:

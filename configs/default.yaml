@@ -1,0 +1,106 @@
+# ============================================================
+# T-GNN Default Configuration
+# Temporal Heterogeneous GNN for Academic Credential Fraud
+# ============================================================
+
+dataset:
+  n_students: 2000
+  n_institutions: 30
+  n_verifiers_per_institution: 5       
+  n_credentials: 20000
+  n_events: 200000
+  n_snapshots: 60
+  snapshot_window_days: 10
+  total_days: 600
+  seeds: [42, 123, 2024, 3407, 7777]
+
+# ── Fraud scenario configuration ──────────────────────────────
+fraud:
+  target_fraud_ratio: 0.10             # ~10% of events labelled fraudulent
+
+  fake_institution:
+    n_fake_institutions: 3             # number of institutions to designate "fake"
+    non_accredited: true
+    high_issuance_multiplier: 5.0      # issuance count > mean * multiplier → suspicious
+    probability: 0.05                  # probability a random institution is fake
+
+  insider_corruption:
+    n_corrupt_verifiers: 8
+    burst_window_days: 3
+    burst_threshold: 10                # >10 verifications in burst_window → corrupt
+    probability: 0.03
+
+  identity_substitution:
+    n_substitution_students: 150
+    min_credentials_in_window: 3
+    window_days: 7
+    probability: 0.04
+
+  collusive_fraud:
+    n_colluding_pairs: 4               # institution pairs colluding
+    min_reciprocal_interactions: 5
+    probability: 0.03
+
+  retroactive_manipulation:
+    n_manipulated_credentials: 400
+    revoke_reissue_window_days: 14
+    min_revocations: 2
+    probability: 0.05
+
+# ── Graph schema ───────────────────────────────────────────────
+graph:
+  node_types:
+    - student
+    - institution
+    - credential
+    - verifier
+  relations:
+    issues: 0
+    owns: 1
+    verifies: 2
+    co_issues: 3
+    revokes: 4
+    modifies: 5
+
+# ── Model hyperparameters ──────────────────────────────────────
+model:
+  embedding_dim: 128
+  n_gnn_layers: 2
+  gru_hidden_dim: 128
+  dropout: 0.3
+  time_encoding: sinusoidal
+  time_encoding_dim: 64              # used for sinusoidal encoding
+  leaky_relu_slope: 0.2              # for attention
+
+# ── Training ──────────────────────────────────────────────────
+training:
+  learning_rate: 0.001
+  batch_size: 64
+  epochs: 100
+  early_stopping_patience: 10
+  optimizer: adam
+  weight_decay: 1.0e-5
+  # class_weight_mode: balanced | manual
+  class_weight_mode: balanced
+  # manual weights only used if class_weight_mode = manual
+  fraud_weight: 9.0                  # weight for class 1 (fraud)
+
+# ── Chronological split ───────────────────────────────────────
+split:
+  train_ratio: 0.70                  # snapshots  0–41
+  val_ratio: 0.15                    # snapshots 42–50
+  test_ratio: 0.15                   # snapshots 51–59
+
+# ── Sensitivity sweep ─────────────────────────────────────────
+sensitivity:
+  embedding_dims: [16, 32, 64, 128, 192, 256, 512]
+  snapshot_windows: [1, 5, 10, 15, 20, 30, 45, 60]
+
+# ── Output paths ─────────────────────────────────────────────
+paths:
+  synthetic_data: data/synthetic/
+  results_raw: results/raw/
+  results_aggregated: results/aggregated/
+  results_logs: results/logs/
+  figures: figures/output/
+  checkpoints: results/checkpoints/

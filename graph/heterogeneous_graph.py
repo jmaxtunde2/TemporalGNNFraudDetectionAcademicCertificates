@@ -189,6 +189,12 @@ def build_hetero_graph(
         }).fillna(0).astype(int).values, dtype=torch.long)
     data.event_timestamp = torch.tensor(
         snap_events["timestamp"].values, dtype=torch.float)
+    if "on_chain" in snap_events.columns:
+        data.event_on_chain = torch.tensor(
+            snap_events["on_chain"].values, dtype=torch.float)
+    else:
+        # Default to zeros if missing (e.g. real data without this feature)
+        data.event_on_chain = torch.zeros(len(snap_events), dtype=torch.float)
     data.snapshot_id = snapshot_id
 
     return data

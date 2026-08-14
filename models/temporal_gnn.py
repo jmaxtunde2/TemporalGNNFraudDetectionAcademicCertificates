@@ -120,8 +120,8 @@ class TemporalHeteroGNN(nn.Module):
         self.time_enc_dim = time_enc_dim
 
         # ── Event-level classifier MLP ─────────────────
-        # input: src_emb + tgt_emb + rel_emb + time_enc
-        clf_in = gru_hidden + gru_hidden + embedding_dim + time_enc_dim
+        # input: src_emb + tgt_emb + rel_emb + time_enc + on_chain (1)
+        clf_in = gru_hidden + gru_hidden + embedding_dim + time_enc_dim + 1
         self.classifier = nn.Sequential(
             nn.Linear(clf_in, 128),
             nn.ReLU(),
@@ -228,8 +228,9 @@ class TemporalHeteroGNN(nn.Module):
 
             rel_emb  = self.rel_emb(data.event_relation)       # (E, emb_dim)
             time_enc = self.time_enc(data.event_timestamp)      # (E, time_enc_dim)
+            on_chain = data.event_on_chain.unsqueeze(-1)        # (E, 1)
 
-            event_emb = torch.cat([src_emb, tgt_emb, rel_emb, time_enc], dim=-1)
+            event_emb = torch.cat([src_emb, tgt_emb, rel_emb, time_enc, on_chain], dim=-1)
             logits    = self.classifier(event_emb).squeeze(-1)  # (E,)
             probs     = torch.sigmoid(logits)
 

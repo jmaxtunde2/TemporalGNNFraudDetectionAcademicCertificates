@@ -52,6 +52,10 @@ def validate(data_dir: str, cfg_path: str = "configs/default.yaml") -> None:
     check(events["fraud_type"].isin(VALID_FRAUD_TYPES).all(), "fraud_type values valid")
     check(events["relation_type"].isin(VALID_RELATIONS).all(), "relation_type values valid")
     check(events["source_type"].isin(VALID_SOURCE_TYPES).all(), "source_type values valid")
+    
+    # IN-01 validation
+    check("on_chain" in events.columns, "on_chain feature column exists")
+    check(events["on_chain"].isin([0,1]).all(), "on_chain ∈ {0,1}")
 
     # ── Timestamp ordering ────────────────────────────────
     check(events["timestamp"].is_monotonic_increasing, "Timestamps are sorted")

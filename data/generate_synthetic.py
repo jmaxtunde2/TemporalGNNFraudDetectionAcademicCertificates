@@ -434,6 +434,9 @@ def generate(seed: int, cfg: dict, output_dir: str) -> None:
     events = pd.concat([iss, own, ver, rev, mod, coiss], ignore_index=True)
     events = events.sort_values("timestamp").reset_index(drop=True)
     events["event_id"] = np.arange(len(events))
+    
+    # IN-01: Blockchain anchoring represented as a boolean feature column
+    events["on_chain"] = rng.choice([0, 1], size=len(events), p=[0.5, 0.5])
 
     log.info("Assigning fraud labels …")
     events = assign_fake_institution_fraud(events, institutions, fraud_cfg["fake_institution"])

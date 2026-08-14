@@ -8,5 +8,4 @@ matplotlib>=3.7.0
 seaborn>=0.12.0
 PyYAML>=6.0
 tqdm>=4.65.0
-
 pyarrow>=12.0.0   # for parquet support

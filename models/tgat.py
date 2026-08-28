@@ -23,8 +23,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch_geometric.data import HeteroData
-from torch_geometric.utils import to_homogeneous
 from models.temporal_gnn import SinusoidalTimeEncoding
+from torch_geometric.utils import softmax
 
 
 class TGATLayer(nn.Module):
@@ -59,18 +59,23 @@ class TGATLayer(nn.Module):
             return self.out_proj(Q)
 
         src, tgt = edge_index[0], edge_index[1]
-        q = Q[tgt]; k = K[src]; v = V[src]
+
+        q = Q[tgt]
+        k = K[src]
+        v = V[src]
 
         scale = math.sqrt(self.head_dim)
-        attn  = (q * k).sum(-1) / scale                 # (E,)
-        # scatter softmax
+
+        attn = (q * k).sum(-1) / scale
+
+        alpha = softmax(attn, tgt, num_nodes=N)
+        alpha = self.dropout(alpha)
+
+        # Weighted message aggregation
+        messages = alpha.unsqueeze(-1) * v
+
         attn_out = torch.zeros_like(Q)
-        for i in range(N):
-            mask = tgt == i
-            if mask.any():
-                a = torch.softmax(attn[mask], dim=0)
-                a = self.dropout(a)
-                attn_out[i] = (a.unsqueeze(-1) * v[mask]).sum(0)
+        attn_out.index_add_(0, tgt, messages)
 
         return self.out_proj(attn_out)
 
@@ -116,7 +121,7 @@ class TGAT(nn.Module):
                       for nt in self.node_types if nt in data.node_types}
             x_all = torch.cat([x_dict[nt] for nt in self.node_types
                                 if nt in x_dict], dim=0)
-            homo = to_homogeneous(data)
+            homo = data.to_homogeneous()
             ei   = homo.edge_index
 
             # Mean timestamp per node (proxy for temporal context)

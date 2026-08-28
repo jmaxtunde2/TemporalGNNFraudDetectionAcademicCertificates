@@ -1,0 +1,148 @@
+{
+  "config_file": "configs/default.yaml",
+  "dataset_config": {
+    "n_credentials": 20000,
+    "n_events": 200000,
+    "n_institutions": 30,
+    "n_snapshots": 60,
+    "n_students": 2000,
+    "n_verifiers_per_institution": 5,
+    "seeds": [
+      42,
+      123,
+      2024,
+      3407,
+      7777
+    ],
+    "snapshot_window_days": 10,
+    "total_days": 600
+  },
+  "fraud_config": {
+    "collusive_fraud": {
+      "min_reciprocal_interactions": 5,
+      "n_colluding_pairs": 4,
+      "probability": 0.03
+    },
+    "fake_institution": {
+      "high_issuance_multiplier": 5.0,
+      "n_fake_institutions": 3,
+      "non_accredited": true,
+      "probability": 0.05
+    },
+    "identity_substitution": {
+      "min_credentials_in_window": 3,
+      "n_substitution_students": 150,
+      "probability": 0.04,
+      "window_days": 7
+    },
+    "insider_corruption": {
+      "burst_threshold": 10,
+      "burst_window_days": 3,
+      "n_corrupt_verifiers": 8,
+      "probability": 0.03
+    },
+    "retroactive_manipulation": {
+      "min_revocations": 2,
+      "n_manipulated_credentials": 400,
+      "probability": 0.05,
+      "revoke_reissue_window_days": 14
+    },
+    "target_fraud_ratio": 0.1
+  },
+  "generated_from_repository": true,
+  "split": {
+    "test_snapshot_ids": [
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59
+    ],
+    "train_snapshot_ids": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41
+    ],
+    "validation_snapshot_ids": [
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50
+    ]
+  },
+  "tables": {
+    "credentials": {
+      "file_bytes": 393620,
+      "metadata_unavailable": "Install pyarrow or fastparquet to extract Parquet metadata.",
+      "sha256": "3ec0e3b5be774904938bb8fa4be6b7193b35d6f0606de489917d22ec3a16e5ff"
+    },
+    "events": {
+      "file_bytes": 3555597,
+      "metadata_unavailable": "Install pyarrow or fastparquet to extract Parquet metadata.",
+      "sha256": "264a7e4a94441e13ce5da75f7e14d04415a4692c3697b07a87f66b316cd7e992"
+    },
+    "institutions": {
+      "file_bytes": 3223,
+      "metadata_unavailable": "Install pyarrow or fastparquet to extract Parquet metadata.",
+      "sha256": "0fcf8ae04ee1211ac0a6ec36eae934099786d4ef201ad5fba2a767f00cb456ea"
+    },
+    "students": {
+      "file_bytes": 26128,
+      "metadata_unavailable": "Install pyarrow or fastparquet to extract Parquet metadata.",
+      "sha256": "fc4eb35d2ca148e2a928f84cd6719de2dbeed1099b93fef40d0565da58536b55"
+    },
+    "verifiers": {
+      "file_bytes": 4039,
+      "metadata_unavailable": "Install pyarrow or fastparquet to extract Parquet metadata.",
+      "sha256": "983d5740d1564d31958b3b1291f4a76af5224035aabf6c0ed145b3bf6343eead"
+    }
+  }
+}

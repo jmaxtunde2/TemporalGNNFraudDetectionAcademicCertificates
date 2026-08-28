@@ -22,7 +22,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch_geometric.data import HeteroData
-from torch_geometric.utils import to_homogeneous
+
 from models.temporal_gnn import SinusoidalTimeEncoding
 
 
@@ -120,7 +120,7 @@ class TGN(nn.Module):
 
             x_all  = torch.cat([h_dict[nt] for nt in self.node_types
                                  if nt in h_dict], dim=0)
-            homo   = to_homogeneous(data)
+            homo   = data.to_homogeneous()
             ei     = homo.edge_index
 
             # Self-attention aggregation

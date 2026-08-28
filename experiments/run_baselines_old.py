@@ -8,15 +8,12 @@ Every execution regenerates all baseline results from scratch.
 Existing JSON result files are overwritten.
 
 Models:
-    ACTIVE:
-    - tgnn
-    - isolation_forest
-
-    COMMENTED / AVAILABLE FOR LATER:
     - static_gcn
     - tgat
     - tgn
+    - tgnn
     - cnn
+    - isolation_forest
 
 Features:
     - Always fresh: existing results are overwritten.
@@ -734,8 +731,8 @@ def main():
 
     parser = argparse.ArgumentParser(
         description=(
-            "Run the active baseline experiments "
-            "(currently TGNN and Isolation Forest) from scratch."
+            "Run all baseline experiments "
+            "from scratch."
         )
     )
 
@@ -967,15 +964,10 @@ def main():
         # GNN MODELS
         # ====================================================================
 
-        # --------------------------------------------------------------------
-        # ACTIVE GNN MODELS
-        # --------------------------------------------------------------------
-        # Only TGNN is currently enabled.
-        # Uncomment the other models below when you want to run them again.
         for model_name in [
-            # "static_gcn",
-            # "tgat",
-            # "tgn",
+            "static_gcn",
+            "tgat",
+            "tgn",
             "tgnn",
         ]:
 
@@ -1154,69 +1146,68 @@ def main():
 
                 continue
 
-#        # ====================================================================
-#        # CNN
-#        # ====================================================================
-#
-#        cnn_file = (
-#            out_path
-#            / f"cnn_seed_{seed}.json"
-#        )
-#
-#        log.info("")
-#        log.info(
-#            "-" * 70
-#        )
-#        log.info(
-#            "STARTING CNN | seed=%d",
-#            seed,
-#        )
-#        log.info(
-#            "Result will be written to: %s",
-#            cnn_file,
-#        )
-#        log.info(
-#            "-" * 70
-#        )
-#
-#        try:
-#
-#            cnn_result = run_cnn_baseline(
-#                train_s,
-#                val_s,
-#                test_s,
-#                device,
-#                cfg,
-#                seed,
-#            )
-#
-#            save_json(
-#                cnn_file,
-#                {
-#                    "model": "cnn",
-#                    "seed": seed,
-#                    **cnn_result,
-#                },
-#            )
-#
-#            log.info(
-#                "COMPLETED CNN | seed=%d | F1=%.4f | AUC=%.4f",
-#                seed,
-#                cnn_result["test_f1"],
-#                cnn_result["test_roc_auc"],
-#            )
-#
-#        except Exception:
-#
-#            log.exception(
-#                "FAILED CNN | seed=%d",
-#                seed,
-#            )
-#
-#            log.info(
-#                "Continuing with Isolation Forest..."
-#            )
-#
+        # ====================================================================
+        # CNN
+        # ====================================================================
+
+        cnn_file = (
+            out_path
+            / f"cnn_seed_{seed}.json"
+        )
+
+        log.info("")
+        log.info(
+            "-" * 70
+        )
+        log.info(
+            "STARTING CNN | seed=%d",
+            seed,
+        )
+        log.info(
+            "Result will be written to: %s",
+            cnn_file,
+        )
+        log.info(
+            "-" * 70
+        )
+
+        try:
+
+            cnn_result = run_cnn_baseline(
+                train_s,
+                val_s,
+                test_s,
+                device,
+                cfg,
+                seed,
+            )
+
+            save_json(
+                cnn_file,
+                {
+                    "model": "cnn",
+                    "seed": seed,
+                    **cnn_result,
+                },
+            )
+
+            log.info(
+                "COMPLETED CNN | seed=%d | F1=%.4f | AUC=%.4f",
+                seed,
+                cnn_result["test_f1"],
+                cnn_result["test_roc_auc"],
+            )
+
+        except Exception:
+
+            log.exception(
+                "FAILED CNN | seed=%d",
+                seed,
+            )
+
+            log.info(
+                "Continuing with Isolation Forest..."
+            )
 
         # ====================================================================
         # ISOLATION FOREST

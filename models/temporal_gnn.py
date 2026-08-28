@@ -16,6 +16,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch_geometric.data import HeteroData
+from torch_geometric.nn import GCNConv, GATConv
 from models.relation_attention import RelationAwareConv
 from graph.relations import RelationEmbedding, N_RELATIONS
 from graph.schema import EDGE_TYPES
@@ -83,12 +84,18 @@ class TemporalHeteroGNN(nn.Module):
         dropout: float     = 0.3,
         time_enc: str      = "sinusoidal",
         time_enc_dim: int  = 64,
+        use_heterogeneous: bool = True,
+        use_attention: bool = True,
+        use_gru: bool = True,
     ) -> None:
         super().__init__()
         self.embedding_dim = embedding_dim
         self.gru_hidden    = gru_hidden
         self.node_types    = list(input_dims.keys())
         self.dropout       = nn.Dropout(dropout)
+        self.use_heterogeneous = use_heterogeneous
+        self.use_attention = use_attention
+        self.use_gru = use_gru
 
         # ── Input projections per node type ──────────────
         self.input_proj = nn.ModuleDict({
@@ -99,15 +106,26 @@ class TemporalHeteroGNN(nn.Module):
         # ── Relation-aware GNN layers ──────────────────
         dims_after_proj = {nt: embedding_dim for nt in input_dims}
         self.gnn_layers = nn.ModuleList()
-        for _ in range(n_layers):
-            self.gnn_layers.append(
-                RelationAwareConv(dims_after_proj, embedding_dim,
-                                  dropout=dropout)
-            )
+        if use_heterogeneous:
+            for _ in range(n_layers):
+                self.gnn_layers.append(
+                    RelationAwareConv(dims_after_proj, embedding_dim,
+                                      dropout=dropout)
+                )
+        else:
+            # Ablation mode: collapse node/relation types into one graph.
+            # A2 uses homogeneous GCN; A4 uses homogeneous graph attention.
+            Conv = GATConv if use_attention else GCNConv
+            for _ in range(n_layers):
+                if use_attention:
+                    self.gnn_layers.append(Conv(embedding_dim, embedding_dim, heads=1,
+                                                concat=False, dropout=dropout))
+                else:
+                    self.gnn_layers.append(Conv(embedding_dim, embedding_dim))
 
         # ── GRU: processes the per-node GNN output over time ──
         # We pool all node embeddings into a global context vector
-        self.gru = nn.GRUCell(embedding_dim, gru_hidden)
+        self.gru = nn.GRUCell(embedding_dim, gru_hidden) if use_gru else None
 
         # ── Relation embedding ─────────────────────────
         self.rel_emb = RelationEmbedding(embedding_dim)
@@ -140,10 +158,27 @@ class TemporalHeteroGNN(nn.Module):
 
     def _apply_gnn(self, x_dict: dict[str, torch.Tensor],
                    data: HeteroData) -> dict[str, torch.Tensor]:
+        if self.use_heterogeneous:
+            for layer in self.gnn_layers:
+                x_dict = layer(x_dict, data)
+                x_dict = {nt: self.dropout(h) for nt, h in x_dict.items()}
+            return x_dict
+
+        # Homogeneous ablation: concatenate nodes in deterministic type order,
+        # apply GCN/GAT, then split back to the original node types.
+        node_types = [nt for nt in self.node_types if nt in x_dict]
+        counts = [x_dict[nt].shape[0] for nt in node_types]
+        x_all = torch.cat([x_dict[nt] for nt in node_types], dim=0)
+        homo = data.to_homogeneous()
         for layer in self.gnn_layers:
-            x_dict = layer(x_dict, data)
-            x_dict = {nt: self.dropout(h) for nt, h in x_dict.items()}
-        return x_dict
+            x_all = layer(x_all, homo.edge_index)
+            x_all = self.dropout(F.elu(x_all))
+        out = {}
+        start = 0
+        for nt, n in zip(node_types, counts):
+            out[nt] = x_all[start:start+n]
+            start += n
+        return out
 
     def _pool_global(self, x_dict: dict[str, torch.Tensor]) -> torch.Tensor:
         """Mean-pool all node embeddings into one global vector."""
@@ -197,20 +232,24 @@ class TemporalHeteroGNN(nn.Module):
             # 2. Relation-aware GNN
             x_dict = self._apply_gnn(x_dict, data)
 
-            # 3. GRU over global pooled representation
-            global_vec = self._pool_global(x_dict)          # (emb_dim,)
-            if hidden is None:
+            # 3. Optional GRU over global pooled representation.
+            global_vec = self._pool_global(x_dict)
+            if self.use_gru:
+                if hidden is None:
+                    hidden = torch.zeros(self.gru_hidden, device=device)
+                hidden = self.gru(global_vec.unsqueeze(0),
+                                  hidden.unsqueeze(0)).squeeze(0)
+            else:
                 hidden = torch.zeros(self.gru_hidden, device=device)
-            hidden = self.gru(global_vec.unsqueeze(0),
-                              hidden.unsqueeze(0)).squeeze(0)  # (gru_hidden,)
 
-            # 4. Build per-node GRU-scaled embeddings
-            # Scale each node embedding by the GRU hidden (broadcast)
+            # 4. Build event-time embeddings. When GRU is disabled, the
+            # spatial embedding is used directly; dimensions match by default.
             gru_embs: dict[str, torch.Tensor] = {}
             for nt, h in x_dict.items():
-                # project node embeddings to gru_hidden via a simple linear
-                gru_embs[nt] = h + hidden.unsqueeze(0).expand_as(
-                    h[:, :self.gru_hidden])  # residual
+                if self.use_gru:
+                    gru_embs[nt] = h + hidden.unsqueeze(0).expand_as(h[:, :self.gru_hidden])
+                else:
+                    gru_embs[nt] = h
 
             # 5. Event-level classifier
             n_events = data.event_labels.shape[0]

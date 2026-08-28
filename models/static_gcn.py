@@ -14,7 +14,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch_geometric.nn import GCNConv
 from torch_geometric.data import HeteroData
-from torch_geometric.utils import to_homogeneous
 
 
 class StaticGCN(nn.Module):
@@ -69,7 +68,7 @@ class StaticGCN(nn.Module):
                       for nt in self.node_types if nt in data.node_types}
 
             # Convert hetero → homogeneous
-            homo = to_homogeneous(data)
+            homo = data.to_homogeneous()
             x_all = torch.cat([x_dict[nt] for nt in self.node_types
                                 if nt in x_dict], dim=0)
 

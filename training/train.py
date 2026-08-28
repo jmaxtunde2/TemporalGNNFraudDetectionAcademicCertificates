@@ -61,6 +61,9 @@ def build_model(model_name: str, input_dims: dict, cfg: dict,
             dropout=mcfg["dropout"],
             time_enc=mcfg["time_encoding"],
             time_enc_dim=mcfg["time_encoding_dim"],
+            use_heterogeneous=mcfg.get("use_heterogeneous", True),
+            use_attention=mcfg.get("use_attention", True),
+            use_gru=mcfg.get("use_gru", True),
         )
     if model_name == "static_gcn":
         from models.static_gcn import StaticGCN
@@ -133,6 +136,9 @@ def main() -> None:
 
     set_seed(args.seed)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if cfg.get("reproducibility", {}).get("save_environment", True):
+        from reproducibility import capture_environment
+        capture_environment(Path(args.output_dir).parent / "reproducibility" / "environment", Path(__file__).resolve().parents[1])
     log.info("Device: %s | Model: %s | Seed: %d", device, args.model, args.seed)
 
     # ── Load data ────────────────────────────────────────
@@ -225,7 +231,13 @@ def main() -> None:
     # ── Test evaluation ───────────────────────────────────
     if best_state is not None:
         model.load_state_dict({k: v.to(device) for k, v in best_state.items()})
-    test_metrics = evaluate(model, test_snaps, device)
+    prediction_dir = Path(args.output_dir).parent / "predictions" / args.model
+    prediction_dir.mkdir(parents=True, exist_ok=True)
+    test_metrics = evaluate(
+        model, test_snaps, device, return_predictions=True,
+        prediction_output=str(prediction_dir / f"seed_{args.seed}_test.csv"),
+        split_name="test",
+    )
     log.info(
         "TEST  precision=%.4f  recall=%.4f  f1=%.4f  roc_auc=%.4f",
         test_metrics["precision"], test_metrics["recall"],
@@ -233,9 +245,14 @@ def main() -> None:
     )
 
     # ── Save results ──────────────────────────────────────
+    from reproducibility import environment_info, git_info, sha256_file
+    config_hash = sha256_file(args.config) if Path(args.config).exists() else None
     result = dict(
         seed=args.seed, model=args.model,
-        config=cfg["model"], training_time_s=train_time,
+        config=cfg["model"], config_file=args.config, config_sha256=config_hash,
+        git=git_info(Path(__file__).resolve().parents[1]),
+        environment=environment_info(),
+        training_time_s=train_time,
         history=history,
         test_precision=test_metrics["precision"],
         test_recall=test_metrics["recall"],

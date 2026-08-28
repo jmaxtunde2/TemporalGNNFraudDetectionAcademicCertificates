@@ -104,3 +104,12 @@ paths:
   results_logs: results/logs/
   figures: figures/output/
   checkpoints: results/checkpoints/
+
+# ── Reproducibility controls ─────────────────────────────────
+reproducibility:
+  save_raw_predictions: true
+  save_training_history: true
+  save_confusion_matrix: true
+  save_environment: true
+  capture_peak_gpu_memory: true
+  deterministic_torch: true

@@ -85,12 +85,8 @@ def run_ablation(seed: int, cfg: dict, data_dir: str, out_dir: str) -> None:
 
     for key, acfg in ABLATION_CONFIGS.items():
         log.info("Ablation %s | seed=%d", key, seed)
-        try:
-            model = build_model(acfg["model"], input_dims, cfg,
-                                overrides=acfg["overrides"]).to(device)
-        except Exception as e:
-            log.warning("Could not build %s: %s – using default model", key, e)
-            model = build_model(acfg["model"], input_dims, cfg).to(device)
+        model = build_model(acfg["model"], input_dims, cfg,
+                            overrides=acfg["overrides"]).to(device)
 
         opt = torch.optim.Adam(model.parameters(), lr=tcfg["learning_rate"])
         es  = EarlyStopping(patience=tcfg["early_stopping_patience"])
@@ -103,7 +99,9 @@ def run_ablation(seed: int, cfg: dict, data_dir: str, out_dir: str) -> None:
             if es(1 - val_m["f1"]):
                 break
 
-        test_m = evaluate(model, test_s, device)
+        pred_path = out_path.parent / "predictions" / key / f"seed_{seed}_test.csv"
+        test_m = evaluate(model, test_s, device, return_predictions=True,
+                          prediction_output=str(pred_path), split_name="test")
         result = dict(
             config=key, description=acfg["description"],
             seed=seed, **{f"test_{k}": v for k, v in test_m.items()})

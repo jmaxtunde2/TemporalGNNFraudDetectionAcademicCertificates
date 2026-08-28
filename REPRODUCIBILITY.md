@@ -1,138 +1,63 @@
-# REPRODUCIBILITY.md
+# T-GNN Reproducibility Package
 
-## Software Environment
+This repository contains the source code, configuration, synthetic benchmark, experiment runners, and reproducibility instrumentation for the temporal heterogeneous GNN (T-GNN) academic-credential fraud experiments.
 
-| Package            | Version (minimum) |
-|--------------------|-------------------|
-| Python             | 3.10              |
-| PyTorch            | 2.1.0             |
-| PyTorch Geometric  | 2.4.0             |
-| pandas             | 2.0.0             |
-| numpy              | 1.24.0            |
-| scikit-learn       | 1.3.0             |
-| matplotlib         | 3.7.0             |
-| PyYAML             | 6.0               |
-| pyarrow            | 12.0.0            |
+## Reproducibility principle
+
+The repository records the actual configuration, seed, dataset hashes, environment, raw predictions, confusion matrix, ROC data, training history, timing, and peak GPU memory for every experiment. Reported manuscript values must be treated as historical reported results until they are reproduced from these raw outputs; raw values must never be fabricated to match a manuscript aggregate.
+
+## Main configuration
+
+- Synthetic entities: 2,000 students, 30 institutions, 150 verifiers, 20,000 credentials.
+- Target event count: 200,000 (the generator may produce a small deviation because revocation events depend on generated credential status).
+- Temporal snapshots: 60, with a 10-day window.
+- Chronological split: train 0–41, validation 42–50, test 51–59.
+- Model: 128-dimensional node embeddings, two relation-aware graph layers, GRU hidden size 128, sinusoidal time encoding dimension 64.
+- Training: Adam, learning rate 0.001, weight decay 1e-5, 100 epochs maximum, early stopping patience 10, dropout 0.3.
+- Main seeds: 42, 123, 2024, 3407, 7777.
+
+## Commands
 
 ```bash
-pip install -r requirements.txt
-```
-
-## Hardware
-
-All experiments are runnable on CPU. GPU (CUDA 11.8+) strongly recommended for the 200,000-event dataset. Tested on NVIDIA A100 40 GB. Expected wall-clock time on CPU: ~4 h per seed for the full T-GNN.
-
-## Random Seeds
-
-```python
-SEEDS = [42, 123, 2024, 3407, 7777]
-```
-
-## Step-by-Step Commands
-
-### 1. Generate synthetic dataset (seed 42)
-```bash
-python data/generate_synthetic.py --seed 42 --config configs/default.yaml
-```
-
-### 2. Validate dataset
-```bash
+python -m reproducibility.capture_environment
+python -m reproducibility.dataset_manifest
+python -m reproducibility.experiment_manifest
 python data/validate_dataset.py --data data/synthetic/ --config configs/default.yaml
-```
-
-### 3. Train proposed T-GNN (one seed)
-```bash
-python training/train.py --model tgnn --seed 42
-```
-
-### 4. Train all baselines (all 5 seeds)
-```bash
 python experiments/run_baselines.py --seeds 42 123 2024 3407 7777
-```
-
-### 5. Run ablation study
-```bash
 python experiments/run_ablation.py --seeds 42 123 2024 3407 7777
-```
-
-### 6. Run sensitivity analysis
-```bash
 python experiments/run_sensitivity.py --seeds 42 123
 ```
 
-### 7. Generate figures (requires results from steps 4–6)
-```bash
-python figures/figure5.py
-python figures/figure6.py
-python figures/figure7.py
-```
+## Raw outputs
 
-### 8. Run everything end-to-end
-```bash
-python experiments/run_all.py --seeds 42 123 2024 3407 7777
-```
+Baseline results are stored under `results/raw/baselines/` and predictions under `results/raw/predictions/<model>/`.
 
-## Configuration Files
+Ablation results are stored under `results/raw/ablation/` and predictions under `results/raw/predictions/<ablation>/`.
 
-- `configs/default.yaml` — master hyperparameter file
+Each evaluation result records precision, recall, F1, ROC-AUC, inference time, throughput, peak GPU memory, sample count, confusion matrix, classification report, and the prediction-file path. Prediction CSV files contain the global snapshot identifier, ground-truth label, predicted probability, and thresholded prediction for every evaluated event.
 
-## Expected Output Files
+## Ablation configurations
 
-```
-data/synthetic/
-    students.parquet
-    institutions.parquet
-    verifiers.parquet
-    credentials.parquet
-    events.parquet
+- A1: Static homogeneous GCN.
+- A2: Homogeneous GCN + GRU.
+- A3: Heterogeneous relation-aware attention without GRU.
+- A4: Homogeneous graph attention + GRU.
+- A5: Full heterogeneous relation-aware attention + GRU.
 
-results/raw/baselines/
-    tgnn_seed_42.json ... tgnn_seed_7777.json
-    static_gcn_seed_*.json
-    tgat_seed_*.json
-    tgn_seed_*.json
-    cnn_seed_*.json
-    isolation_forest_seed_*.json
+The ablation runner no longer silently falls back to the full T-GNN if an override is invalid. A failed configuration is an experiment failure and must be fixed rather than silently replaced.
 
-results/raw/ablation/
-    A1_static_gcn_seed_*.json  ...  A5_full_tgnn_seed_*.json
+## Environment capture
 
-results/raw/sensitivity/
-    emb_dim_*_seed_*.json
-    snap_win_*_seed_*.json
+Run `python -m reproducibility.capture_environment` before a full experiment. The capture includes Python, OS, CPU, RAM where available, PyTorch, PyG, CUDA, GPU properties, package versions, `pip freeze`, `nvidia-smi`, and Git state.
 
-results/aggregated/
-    baselines.csv
-    ablation.csv
-    sensitivity_raw.csv
+## Dataset manifest
 
-figures/output/
-    figure5_baselines.pdf
-    figure6_ablation.pdf
-    figure7_sensitivity.pdf
-```
+Run `python -m reproducibility.dataset_manifest` to create a machine-readable manifest containing row counts, column names, SHA-256 hashes of the five Parquet files, relation counts, fraud counts/types, per-snapshot counts, and the exact chronological split identifiers.
 
-## Data Privacy Notice
+## Corilla real data
 
-The synthetic dataset is fully self-contained and contains NO real Corilla customer data.
+The repository contains the application-level loader/schema for private Corilla data. The distributed experiment pipeline uses the synthetic Parquet benchmark; private Corilla records must not be committed to this repository. Any manuscript claim about real-data training or blockchain extraction must be supported by a separate private data/extraction manifest.
 
-Real Corilla data (private) can be loaded via:
-```bash
-python training/train.py --data-source real --real-data-dir /path/to/private/
-```
+## Important interpretation rule
 
-This requires the following files (not distributed):
-- `students.csv`
-- `institutions.csv`
-- `certificates.csv`
-- `verifiers.csv` (optional)
-
-**NEVER commit these files to a public repository.**
-
-## Chronological Split (60 snapshots)
-
-| Split | Snapshot Range | Fraction |
-|-------|---------------|----------|
-| Train | 0 – 41        | 70%      |
-| Val   | 42 – 50       | 15%      |
-| Test  | 51 – 59       | 15%      |
+This repository is being prepared to make every result traceable. If a newly reproduced result differs from a previously reported manuscript value, preserve the raw result and investigate the difference. Do not alter code, seeds, labels, or outputs solely to force agreement with a reported aggregate.
